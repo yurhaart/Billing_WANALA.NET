@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WANALA.NET - Wifi Billing Management</title>
+    
+    <!-- === LOGO & PREVIEW LINK (OPEN GRAPH) === -->
+    <link rel="icon" type="image/png" href="https://lh3.googleusercontent.com/d/1IFvvJy7M6bpYOLEzWx1d9EUCNCdxpSJF">
+    <meta property="og:title" content="WANALA.NET - Sistem Tagihan & Ceklis WiFi Rumahan">
+    <meta property="og:description" content="Aplikasi pencatatan tagihan dan status pembayaran pelanggan WANALA.NET">
+    <meta property="og:image" content="https://lh3.googleusercontent.com/d/1IFvvJy7M6bpYOLEzWx1d9EUCNCdxpSJF">
+    <meta property="og:type" content="website">
+    <!-- ======================================= -->
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .month-btn {
+            min-width: 38px;
+            min-height: 38px;
+        }
+        @media (max-width: 768px) {
+            .month-btn-mobile {
+                min-width: 44px;
+                min-height: 44px;
+            }
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans min-h-screen pb-12">
+
+    <!-- Header / Navbar -->
+    <header class="bg-indigo-900 text-white shadow-lg sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-3">
+            <div class="flex items-center gap-3">
+                <!-- Logo di Header (Tanpa Background & Lebih Besar) -->
+                <div class="flex items-center justify-center overflow-hidden w-14 h-14">
+                    <img src="https://lh3.googleusercontent.com/d/1IFvvJy7M6bpYOLEzWx1d9EUCNCdxpSJF" alt="Logo WANALA.NET" class="w-full h-full object-contain drop-shadow" onerror="this.remove(); document.getElementById('fallbackIcon').classList.remove('hidden');">
+                    <i id="fallbackIcon" data-lucide="wifi" class="w-8 h-8 text-white hidden"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold leading-none">WANALA.NET</h1>
+                    <p class="text-xs text-indigo-200 mt-1">Sistem Tagihan & Ceklis WiFi Rumahan</p>
+                </div>
+            </div>
+
+            <!-- Role Selector -->
+            <div class="flex items-center gap-2 flex-wrap">
+                <div class="bg-indigo-950 px-3 py-1.5 rounded-lg flex items-center gap-2 border border-indigo-800">
+                    <i data-lucide="user-check" class="w-4 h-4 text-emerald-400"></i>
+                    <span class="text-xs text-indigo-200 hidden sm:inline">Peran:</span>
+                    <select id="userRoleSelect" onchange="changeRole(this.value)" class="bg-indigo-900 text-white text-xs font-semibold rounded px-2 py-1 outline-none border border-indigo-700 cursor-pointer">
+                        <optgroup label="Admin">
+                            <option value="Admin-Yudi">Admin: Yudi</option>
+                        </optgroup>
+                        <optgroup label="Operator">
+                            <option value="Operator-Suherman">Operator: Suherman</option>
+                            <option value="Operator-Lock">Operator: Lock</option>
+                            <option value="Operator-Sifa">Operator: Sifa</option>
+                            <option value="Operator-Daniel">Operator: Daniel</option>
+                        </optgroup>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 mt-6">
+
+        <!-- Banner Connection Status -->
+        <div id="connectionStatus" class="mb-4 p-3 rounded-lg text-xs font-medium flex items-center justify-between bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-sm">
+            <div class="flex items-center gap-2">
+                <span class="relative flex h-2.5 w-2.5">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                </span>
+                <span>Terhubung ke Google Sheets (WANALA.NET Apps Script API)</span>
+            </div>
+            <button onclick="loadData()" class="underline hover:text-emerald-950 flex items-center gap-1">
+                <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Refresh Data
+            </button>
+        </div>
+
+        <!-- Dashboard KPI Cards -->
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+            <div class="bg-white p-3.5 rounded-xl shadow-sm border border-slate-200">
+                <p class="text-xs font-medium text-slate-500">Total Pelanggan</p>
+                <h3 id="statTotal" class="text-2xl font-extrabold text-slate-800 mt-1">0</h3>
+            </div>
+            <div class="bg-white p-3.5 rounded-xl shadow-sm border border-slate-200">
+                <p class="text-xs font-medium text-slate-500">PPPoE</p>
+                <h3 id="statPppoe" class="text-2xl font-extrabold text-indigo-600 mt-1">0</h3>
+            </div>
+            <div class="bg-white p-3.5 rounded-xl shadow-sm border border-slate-200">
+                <p class="text-xs font-medium text-slate-500">Member250</p>
+                <h3 id="statMember250" class="text-2xl font-extrabold text-blue-600 mt-1">0</h3>
+            </div>
+            <div class="bg-white p-3.5 rounded-xl shadow-sm border border-slate-200">
+                <p class="text-xs font-medium text-slate-500">Member104</p>
+                <h3 id="statMember104" class="text-2xl font-extrabold text-teal-600 mt-1">0</h3>
+            </div>
+            <div class="bg-white p-3.5 rounded-xl shadow-sm border border-slate-200">
+                <p class="text-xs font-medium text-slate-500">Lunas Bulan Ini</p>
+                <h3 id="statPaidThisMonth" class="text-2xl font-extrabold text-emerald-600 mt-1">0</h3>
+            </div>
+            <div class="bg-white p-3.5 rounded-xl shadow-sm border border-slate-200">
+                <p class="text-xs font-medium text-slate-500">Belum Bayar</p>
+                <h3 id="statUnpaidThisMonth" class="text-2xl font-extrabold text-rose-600 mt-1">0</h3>
+            </div>
+        </div>
+
+        <!-- Action Bar & Filter -->
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-6 flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center gap-2 flex-1 min-w-[240px]">
+                <div class="relative flex-1">
+                    <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-3"></i>
+                    <input type="text" id="searchInput" oninput="filterData()" placeholder="Cari nama pelanggan..." class="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <select id="filterPlan" onchange="filterData()" class="bg-slate-50 border border-slate-300 text-sm rounded-lg px-3 py-2 outline-none">
+                    <option value="ALL">Semua Paket</option>
+                    <option value="PPPoE">PPPoE</option>
+                    <option value="Member250">Member250</option>
+                    <option value="Member104">Member104</option>
+                </select>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <!-- Mode View Switcher (Desktop Table / Mobile Card) -->
+                <div class="bg-slate-100 p-1 rounded-lg flex border border-slate-200 text-xs">
+                    <button id="viewCardBtn" onclick="switchView('card')" class="px-2.5 py-1 rounded-md font-medium text-slate-600 transition">
+                        <i data-lucide="layout-grid" class="w-3.5 h-3.5 inline mr-1"></i>Kartu
+                    </button>
+                    <button id="viewTableBtn" onclick="switchView('table')" class="px-2.5 py-1 rounded-md font-medium text-slate-600 transition">
+                        <i data-lucide="table" class="w-3.5 h-3.5 inline mr-1"></i>Tabel
+                    </button>
+                </div>
+
+                <!-- Admin Only Add Customer Button -->
+                <button id="addCustomerBtn" onclick="openAddModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm px-4 py-2 rounded-lg font-medium shadow-sm transition flex items-center gap-1.5">
+                    <i data-lucide="user-plus" class="w-4 h-4"></i> Tambah Pelanggan
+                </button>
+            </div>
+        </div>
+
+        <!-- Loading Indicator -->
+        <div id="loadingSpinner" class="hidden py-12 text-center">
+            <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-indigo-600 border-t-transparent"></div>
+            <p class="text-xs text-slate-500 mt-2 font-medium">Memuat Data dari Google Sheets...</p>
+        </div>
+
+        <!-- View 1: Mobile Card View Container -->
+        <div id="cardViewContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+
+        <!-- View 2: Desktop Table View Container -->
+        <div id="tableViewContainer" class="hidden bg-white rounded-xl shadow-sm border border-slate-200 overflow-x-auto">
+            <table class="w-full text-left text-xs">
+                <thead class="bg-slate-50 text-slate-600 border-b border-slate-200 uppercase font-semibold">
+                    <tr>
+                        <th class="p-3">Pelanggan</th>
+                        <th class="p-3">Paket</th>
+                        <th class="p-3">Tagihan</th>
+                        <th class="p-3 text-center">Jan</th>
+                        <th class="p-3 text-center">Feb</th>
+                        <th class="p-3 text-center">Mar</th>
+                        <th class="p-3 text-center">Apr</th>
+                        <th class="p-3 text-center">Mei</th>
+                        <th class="p-3 text-center">Jun</th>
+                        <th class="p-3 text-center">Jul</th>
+                        <th class="p-3 text-center">Agu</th>
+                        <th class="p-3 text-center">Sep</th>
+                        <th class="p-3 text-center">Okt</th>
+                        <th class="p-3 text-center">Nov</th>
+                        <th class="p-3 text-center">Des</th>
+                        <th class="p-3 text-center">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody" class="divide-y divide-slate-100"></tbody>
+            </table>
+        </div>
+
+    </main>
+
+    <!-- Modal Tambah Pelanggan (Admin Only) -->
+    <div id="addModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-xl max-w-md w-full p-6 shadow-2xl">
+            <div class="flex justify-between items-center mb-4 border-b pb-3">
+                <h3 class="font-bold text-slate-800 text-lg flex items-center gap-2">
+                    <i data-lucide="user-plus" class="w-5 h-5 text-indigo-600"></i> Tambah Pelanggan Baru
+                </h3>
+                <button onclick="closeAddModal()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <form id="addCustomerForm" onsubmit="submitNewCustomer(event)">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Nama Pelanggan</label>
+                        <input type="text" id="custName" required placeholder="Contoh: Budi Santoso" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Jenis Langganan</label>
+                        <select id="custPlan" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                            <option value="PPPoE">PPPoE</option>
+                            <option value="Member250">Member250</option>
+                            <option value="Member104">Member104</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Jumlah Tagihan (Rp)</label>
+                        <input type="number" id="custAmount" required placeholder="150000" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                    </div>
+                </div>
+                <div class="mt-6 flex justify-end gap-2">
+                    <button type="button" onclick="closeAddModal()" class="px-4 py-2 border rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-50">Batal</button>
+                    <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-xs font-semibold hover:bg-indigo-700">Simpan Data</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Script Javascript Utama -->
+    <script>
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxarjpJ7vLR8MkbAcKQe37AGhGeuK8bg-UCcUGX18LFGEVtTUjHG17kHclB2LGMTKwfuQ/exec';
+
+        const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+        const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+
+        let customersData = [
+            { id: 'CUS-101', name: 'Pak Rahmad', plan: 'PPPoE', amount: 150000, months: { jan: true, feb: true, mar: false, apr: false, may: false, jun: false, jul: false, aug: false, sep: false, oct: false, nov: false, dec: false }, lastUpdated: 'Suherman' },
+            { id: 'CUS-102', name: 'Bu Santi', plan: 'Member250', amount: 250000, months: { jan: true, feb: true, mar: true, apr: false, may: false, jun: false, jul: false, aug: false, sep: false, oct: false, nov: false, dec: false }, lastUpdated: 'Lock' },
+            { id: 'CUS-103', name: 'Mas Joko', plan: 'Member104', amount: 104000, months: { jan: true, feb: false, mar: false, apr: false, may: false, jun: false, jul: false, aug: false, sep: false, oct: false, nov: false, dec: false }, lastUpdated: 'Sifa' },
+            { id: 'CUS-104', name: 'Kios Warnet', plan: 'PPPoE', amount: 200000, months: { jan: true, feb: true, mar: false, apr: false, may: false, jun: false, jul: false, aug: false, sep: false, oct: false, nov: false, dec: false }, lastUpdated: 'Daniel' }
+        ];
+
+        let currentRole = 'Admin-Yudi';
+        let currentView = 'card';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            if (window.innerWidth >= 768) {
+                currentView = 'table';
+            }
+            updateViewButtons();
+            loadData();
+            updateRoleUI();
+        });
+
+        function changeRole(role) {
+            currentRole = role;
+            updateRoleUI();
+        }
+
+        function updateRoleUI() {
+            const addBtn = document.getElementById('addCustomerBtn');
+            const isAdmin = currentRole.startsWith('Admin');
+            
+            if (isAdmin) {
+                addBtn.classList.remove('hidden');
+            } else {
+                addBtn.classList.add('hidden');
+            }
+            renderData(getFilteredData());
+        }
+
+        function switchView(view) {
+            currentView = view;
+            updateViewButtons();
+            renderData(getFilteredData());
+        }
+
+        function updateViewButtons() {
+            const cardBtn = document.getElementById('viewCardBtn');
+            const tableBtn = document.getElementById('viewTableBtn');
+            const cardCont = document.getElementById('cardViewContainer');
+            const tableCont = document.getElementById('tableViewContainer');
+
+            if (currentView === 'card') {
+                cardBtn.className = 'px-2.5 py-1 rounded-md font-semibold text-indigo-700 bg-white shadow-sm border border-slate-200';
+                tableBtn.className = 'px-2.5 py-1 rounded-md font-medium text-slate-500 hover:text-slate-800';
+                cardCont.classList.remove('hidden');
+                tableCont.classList.add('hidden');
+            } else {
+                tableBtn.className = 'px-2.5 py-1 rounded-md font-semibold text-indigo-700 bg-white shadow-sm border border-slate-200';
+                cardBtn.className = 'px-2.5 py-1 rounded-md font-medium text-slate-500 hover:text-slate-800';
+                tableCont.classList.remove('hidden');
+                cardCont.classList.add('hidden');
+            }
+        }
+
+        async function loadData() {
+            const spinner = document.getElementById('loadingSpinner');
+            if (SCRIPT_URL) {
+                spinner.classList.remove('hidden');
+                try {
+                    const res = await fetch(SCRIPT_URL);
+                    const data = await res.json();
+                    if (Array.isArray(data) && data.length > 0) {
+                        customersData = data;
+                    }
+                } catch (err) {
+                    console.log('Menggunakan data sampel lokal:', err);
+                } finally {
+                    spinner.classList.add('hidden');
+                }
+            }
+            updateDashboardKPI();
+            renderData(getFilteredData());
+        }
+
+        function updateDashboardKPI() {
+            document.getElementById('statTotal').innerText = customersData.length;
+            document.getElementById('statPppoe').innerText = customersData.filter(c => c.plan === 'PPPoE').length;
+            document.getElementById('statMember250').innerText = customersData.filter(c => c.plan === 'Member250').length;
+            document.getElementById('statMember104').innerText = customersData.filter(c => c.plan === 'Member104').length;
+
+            const currentMonthIdx = new Date().getMonth();
+            const currentMonthKey = MONTHS[currentMonthIdx];
+
+            const paidCount = customersData.filter(c => c.months && c.months[currentMonthKey]).length;
+            document.getElementById('statPaidThisMonth').innerText = paidCount;
+            document.getElementById('statUnpaidThisMonth').innerText = customersData.length - paidCount;
+        }
+
+        function getFilteredData() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const plan = document.getElementById('filterPlan').value;
+
+            return customersData.filter(c => {
+                const matchSearch = c.name.toLowerCase().includes(search);
+                const matchPlan = plan === 'ALL' || c.plan === plan;
+                return matchSearch && matchPlan;
+            });
+        }
+
+        function filterData() {
+            renderData(getFilteredData());
+        }
+
+        function renderData(data) {
+            renderCardView(data);
+            renderTableView(data);
+            lucide.createIcons();
+        }
+
+        function renderCardView(data) {
+            const container = document.getElementById('cardViewContainer');
+            container.innerHTML = '';
+
+            if (data.length === 0) {
+                container.innerHTML = `<div class="col-span-full py-8 text-center text-slate-400 text-sm">Tidak ada data pelanggan.</div>`;
+                return;
+            }
+
+            const isAdmin = currentRole.startsWith('Admin');
+
+            data.forEach(c => {
+                const card = document.createElement('div');
+                card.className = 'bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between';
+
+                let monthGridHtml = '<div class="grid grid-cols-4 gap-2 my-3">';
+                MONTHS.forEach((mKey, idx) => {
+                    const isPaid = c.months ? c.months[mKey] : false;
+                    const btnClass = isPaid 
+                        ? 'bg-emerald-500 text-white font-bold border-emerald-600 shadow-sm' 
+                        : 'bg-slate-100 text-slate-400 hover:bg-slate-200 border-slate-200';
+
+                    monthGridHtml += `
+                        <button onclick="toggleMonth('${c.id}', '${mKey}', ${!isPaid})" 
+                                class="month-btn-mobile border rounded-lg text-xs font-semibold flex flex-col items-center justify-center transition active:scale-95 ${btnClass}">
+                            <span>${MONTH_NAMES[idx]}</span>
+                            <i data-lucide="${isPaid ? 'check-circle' : 'circle'}" class="w-3.5 h-3.5 mt-0.5"></i>
+                        </button>
+                    `;
+                });
+                monthGridHtml += '</div>';
+
+                card.innerHTML = `
+                    <div>
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h4 class="font-bold text-slate-800 text-base">${c.name}</h4>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <span class="px-2 py-0.5 bg-indigo-50 text-indigo-700 text-[10px] font-bold rounded-md border border-indigo-200">${c.plan}</span>
+                                    <span class="text-xs font-semibold text-slate-600">Rp ${Number(c.amount).toLocaleString('id-ID')}</span>
+                                </div>
+                            </div>
+                            ${isAdmin ? `
+                                <button onclick="deleteCustomer('${c.id}')" class="bg-rose-50 hover:bg-rose-100 text-rose-600 px-2.5 py-1 rounded-lg text-xs font-semibold border border-rose-200 flex items-center gap-1 transition">
+                                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Hapus Pelanggan
+                                </button>
+                            ` : ''}
+                        </div>
+
+                        ${monthGridHtml}
+                    </div>
+
+                    <div class="text-[10px] text-slate-400 pt-2 border-t border-slate-100 flex justify-between items-center">
+                        <span>Status: Terverifikasi</span>
+                        <span>Update: ${c.lastUpdated || '-'}</span>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function renderTableView(data) {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+
+            if (data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="16" class="p-4 text-center text-slate-400">Tidak ada data.</td></tr>`;
+                return;
+            }
+
+            const isAdmin = currentRole.startsWith('Admin');
+
+            data.forEach(c => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 transition';
+
+                let monthTds = '';
+                MONTHS.forEach((mKey, idx) => {
+                    const isPaid = c.months ? c.months[mKey] : false;
+                    const btnClass = isPaid 
+                        ? 'bg-emerald-500 text-white font-bold' 
+                        : 'bg-slate-100 text-slate-400 hover:bg-slate-200';
+
+                    monthTds += `
+                        <td class="p-2 text-center">
+                            <button onclick="toggleMonth('${c.id}', '${mKey}', ${!isPaid})" 
+                                    class="month-btn mx-auto rounded-lg text-[10px] font-semibold flex items-center justify-center transition border ${btnClass}">
+                                ${isPaid ? '<i data-lucide="check" class="w-3.5 h-3.5"></i>' : MONTH_NAMES[idx]}
+                            </button>
+                        </td>
+                    `;
+                });
+
+                tr.innerHTML = `
+                    <td class="p-3 font-semibold text-slate-800">${c.name}</td>
+                    <td class="p-3"><span class="px-2 py-0.5 bg-indigo-50 text-indigo-700 text-[10px] font-bold rounded border border-indigo-200">${c.plan}</span></td>
+                    <td class="p-3 font-medium text-slate-600">Rp ${Number(c.amount).toLocaleString('id-ID')}</td>
+                    ${monthTds}
+                    <td class="p-3 text-center">
+                        ${isAdmin ? `
+                            <button onclick="deleteCustomer('${c.id}')" class="bg-rose-50 hover:bg-rose-100 text-rose-600 px-2 py-1 rounded-md text-[11px] font-semibold border border-rose-200 flex items-center justify-center gap-1 mx-auto transition">
+                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Hapus
+                            </button>
+                        ` : '<span class="text-slate-300">-</span>'}
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        async function toggleMonth(custId, monthKey, newPaidState) {
+            const currentUser = currentRole.split('-')[1];
+            
+            const target = customersData.find(c => c.id === custId);
+            if (target) {
+                if (!target.months) target.months = {};
+                target.months[monthKey] = newPaidState;
+                target.lastUpdated = currentUser;
+                updateDashboardKPI();
+                renderData(getFilteredData());
+            }
+
+            if (SCRIPT_URL) {
+                try {
+                    await fetch(SCRIPT_URL, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            action: 'updateMonth',
+                            id: custId,
+                            monthKey: monthKey,
+                            isPaid: newPaidState,
+                            updatedBy: currentUser
+                        })
+                    });
+                } catch (err) {
+                    console.log('Sync error:', err);
+                }
+            }
+        }
+
+        function openAddModal() { document.getElementById('addModal').classList.remove('hidden'); }
+        function closeAddModal() { document.getElementById('addModal').classList.add('hidden'); }
+
+        async function submitNewCustomer(e) {
+            e.preventDefault();
+            const name = document.getElementById('custName').value;
+            const plan = document.getElementById('custPlan').value;
+            const amount = Number(document.getElementById('custAmount').value);
+            const currentUser = currentRole.split('-')[1];
+
+            const newCust = {
+                id: 'CUS-' + Date.now(),
+                name: name,
+                plan: plan,
+                amount: amount,
+                months: { jan: false, feb: false, mar: false, apr: false, may: false, jun: false, jul: false, aug: false, sep: false, oct: false, nov: false, dec: false },
+                lastUpdated: currentUser
+            };
+
+            customersData.push(newCust);
+            updateDashboardKPI();
+            renderData(getFilteredData());
+            closeAddModal();
+            document.getElementById('addCustomerForm').reset();
+
+            if (SCRIPT_URL) {
+                try {
+                    await fetch(SCRIPT_URL, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            action: 'addCustomer',
+                            data: newCust
+                        })
+                    });
+                } catch (err) {
+                    console.log('Error adding customer:', err);
+                }
+            }
+        }
+
+        async function deleteCustomer(id) {
+            if (!confirm('Apakah Anda yakin ingin menghapus pelanggan ini?')) return;
+            customersData = customersData.filter(c => c.id !== id);
+            updateDashboardKPI();
+            renderData(getFilteredData());
+
+            if (SCRIPT_URL) {
+                try {
+                    await fetch(SCRIPT_URL, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            action: 'deleteCustomer',
+                            id: id
+                        })
+                    });
+                } catch (err) {
+                    console.log('Error deleting:', err);
+                }
+            }
+        }
+    </script>
+</body>
+</html>
